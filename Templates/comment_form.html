@@ -1,0 +1,149 @@
+<!-- comment_form.html -->
+<!DOCTYPE html>
+<html lang="ko">
+<head> 
+    <meta charset="UTF-8" name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>댓글 작성 및 목록</title>
+    <style>  
+    .inline {  /* 인라인 레이아웃을 위한 클래스 */
+        display: flex;  /* 플렉스 레이아웃 적용 */
+        gap: 10px;  /* 요소 사이의 간격 설정 */
+        align-items: center;  /* 수직 정렬 */
+    }
+    .comment {  /* 댓글 컨테이너 */
+        padding: 10px;
+        border: 1px solid #ccc;  /* 테두리 추가 */
+        margin: 10px 0;  /* 각 댓글 간의 간격 */
+    }
+
+    .comment-header {  /* 사용자와 날짜 표시 */
+        font-weight: bold;  /* 굵은 글씨로 강조 */
+        margin-bottom: 5px;  /* 내용과의 간격 */
+    }
+
+    .comment-content {  /* 내용 */
+        white-space: pre-wrap;  /* 줄바꿈을 자동으로 허용 */
+    }
+    .comment-header button {
+    font-size: 14px;  /* 버튼 폰트 크기 조정 */
+    padding: 5px;  /* 버튼 패딩 조정 */
+    }
+    @media (max-width: 600px)
+    {  /* 화면 너비가 600px 이하인 경우 */
+    .inline {
+        flex-direction: column;  /* 수직 정렬로 변경 */
+    }
+    .comment {
+        padding: 5px;  /* 작은 화면을 위해 패딩 조정 */
+    }
+    }
+    html, body {
+    overflow-x: hidden;  /* 가로 스크롤 방지 */
+    font-size: 16px;  /* 기본 폰트 크기 설정 */
+    }   
+    </style>
+ 
+ <script> 
+    function showPasswordPrompt(commentId) {
+        const password = prompt("수정하려면 비밀번호를 입력하세요.");
+        if (password) {
+            fetch(`/comments/${commentId}/validate_password/`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": "{{ csrf_token }}",  // CSRF 토큰
+                },
+                body: JSON.stringify({ password: password }),  // 비밀번호 전송
+            })
+            .then(response => {
+                if (response.status == 200) {  // 비밀번호 일치
+                    loadComment(commentId);  // 댓글 로드
+                } else {
+                    alert("비밀번호가 일치하지 않습니다.");  // 비밀번호 오류
+                }
+            })
+            .catch(error => console.error("비밀번호 확인 실패:", error));
+        }
+    }
+
+    function loadComment(commentId) {
+        fetch(`/comments/${commentId}/`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("name").value = data.name;
+                document.getElementById("content").value = data.content;
+                document.getElementById("comment-id").value = commentId;  // 수정할 댓글 ID 설정
+            })
+            .catch(error => console.error("댓글 로드 실패:", error));
+    } 
+
+    function submitForm() {
+        const form = document.getElementById("comment-form");
+        const commentId = document.getElementById("comment-id").value;  // 댓글 ID 확인
+    
+    if (commentId) {  // 댓글 ID가 있으면 수정 로직 실행
+        updateComment(commentId,form);  // 수정 함수 호출
+    } else {  // 댓글 ID가 없으면 일반 폼 제출
+        form.submit();  // 새 댓글 작성
+    }
+    }  // 폼 제출
+    function updateComment(commentId,form) {
+    // 수정 요청을 위한 데이터 가져오기
+    const formData = new FormData(document.getElementById("comment-form"));  // 폼 데이터
+    fetch(`/comments/${commentId}/update/`, {  // 수정 요청 경로
+        method: "POST",
+        headers: {
+            "X-CSRFToken": "{{ csrf_token }}",  // CSRF 토큰 추가
+        },
+        //body: JSON.stringify(document.getElementById("name").value)
+         body: formData ,  // 폼 데이터 전송
+    })
+    .then(response => {
+        if (response.ok) {
+            // 응답이 성공적이면 JSON으로 변환
+            location.reload()
+            alert("댓글이 성공적으로 수정되었습니다.");
+        } else {
+            alert("댓글 수정 실패.");
+        }
+    })
+    .catch(error => console.error("댓글 수정 실패:", error));
+}
+    
+</script>
+</head>
+<body >
+    <h2>댓글 작성</h2>
+    <form id="comment-form" action="/comments/" method="post">
+        {% csrf_token %}
+        <input type="hidden" id="comment-id" name="comment_id" value="">  
+        <div class="inline">
+            <label for="name">이름:</label>
+            <input type="text" id="name" name="name" required>
+
+            <label for="password">비밀번호:</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <br>
+
+        <label for="content">댓글:</label><br>
+        <textarea id="content" name="content" rows="4" cols="50" required></textarea>
+        <br><br>
+
+        <input type="button" value="댓글 제출" onclick="submitForm()">
+    </form>
+    <h2>댓글 목록</h2>
+    {% for comment in comments %}
+    <div class="comment">  <!-- 각 댓글을 구분하는 컨테이너 -->
+        <div class="comment-header">  <!-- 사용자와 날짜 표시 -->
+            {{ comment.name }} 
+            ({{ comment.created_at|date:'Y-m-d H:i' }})  <!-- 원하는 형식으로 날짜 표시 -->
+            <button onclick="showPasswordPrompt('{{ comment.id }}')">수정</button>  <!-- 수정 버튼 -->
+        </div>
+        <div class="comment-content">  <!-- 댓글 내용 표시 -->
+            {{ comment.content }} 
+        </div>
+    </div>
+    {% endfor %}
+</body>
+</html>
