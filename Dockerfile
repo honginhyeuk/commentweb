@@ -13,8 +13,17 @@ RUN pip install --no-cache-dir -r requirements.txt
 # 애플리케이션 파일 복사
 COPY . .
 
+# 정적 파일 수집
+RUN python manage.py collectstatic --noinput
+
+# 엔트리포인트 스크립트 복사
+COPY entrypoint.sh .
+
+# 엔트리포인트 스크립트 실행 권한 추가
+RUN chmod +x /app/entrypoint.sh
+
 # 포트 설정
 EXPOSE 8000
 
-# 명령어 설정
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "my_project1.wsgi:application"]
+# 엔트리포인트 설정
+ENTRYPOINT ["/app/entrypoint.sh"]
