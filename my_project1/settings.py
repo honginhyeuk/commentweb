@@ -37,6 +37,9 @@ ALLOWED_HOSTS = ['*']
 # https://docs.djangoproject.com/en/4.0/howto/static-files/
 
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+# settings.py
+
+CSRF_TRUSTED_ORIGINS = ['https://port-0-commentweb-1pgyr2mlvb2vftm.sel5.cloudtype.app', 'http://127.0.0.1']
 
 # Media files
 MEDIA_URL = '/media/'
